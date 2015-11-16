@@ -90,7 +90,7 @@ public class TweetsAboutCandidates {
             FileWriter addTweets = new FileWriter(new File(filename), true);
             if(tweets!= null && tweets.size()>0){
                 for(Status tweet : tweets){
-                    String encodedText = Base64.encode(tweet.getText().getBytes());     
+                    String encodedText = Base64.encode(tweet.getText().getBytes("UTF-8"));     
                     addTweets.write(encodedText + "," + tweet.getUser().getId() +
                             "," + tweet.getId() + ","+ candidate.name + 
                             "," + tweet.getCreatedAt() + "\n");
