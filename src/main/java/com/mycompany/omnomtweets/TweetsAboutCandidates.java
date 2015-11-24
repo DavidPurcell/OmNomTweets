@@ -117,8 +117,10 @@ public class TweetsAboutCandidates {
             if(tweets!= null && tweets.size()>0){
                 for(Status tweet : tweets){
                     String tweetText;
+                    String idOfRetweetee = "";
                     if(tweet.getRetweetedStatus()!=null){
                         tweetText = "RT " + tweet.getRetweetedStatus().getText();
+                        idOfRetweetee = "" + tweet.getRetweetedStatus().getUser().getScreenName();
                         //System.out.println("retweeted" + tweetText);
                     } else {
                         tweetText = tweet.getText();
@@ -147,9 +149,9 @@ public class TweetsAboutCandidates {
                         }
                     }
                     String encodedText = tweet.getText().replaceAll("\"", "\"\"");
-                    String writeMe = "\"" + encodedText + "\"," + tweet.getUser().getId() +
-                            "," + tweet.getId() + ","+ candidate.name + 
-                            "," + tweet.getCreatedAt() + "," + urlText + "\n";
+                    String writeMe = "\"" + encodedText + "\"," + urlText + "," + 
+                            tweet.getUser().getId() + "," + tweet.getId() + ","+ candidate.name + 
+                            "," + tweet.getCreatedAt() + "," + idOfRetweetee + "\n";
                     //System.out.println(writeMe);
                     addTweets.write(writeMe);
                 }
