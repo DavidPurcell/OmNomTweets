@@ -31,6 +31,7 @@ import twitter4j.TwitterException;
 public class RetweetersOfCandidate {
     Candidate candidate;
     private final Twitter twitter;
+    private int calls;
     
     public RetweetersOfCandidate(Candidate candidate, Twitter twitter){
         this.candidate = candidate;
@@ -42,33 +43,32 @@ public class RetweetersOfCandidate {
      * @param filename name of file to append to.
      * @param calls number of API calls left
      */
-    public void run(String filename, int calls) throws InterruptedException{
+    public void run(String filename, int totalCalls) throws InterruptedException{
         //System.out.println(filename);
+        this.calls = totalCalls;
         boolean success = true;
         List<String> candidateTweetIds = getCandidateTweetIds();
         for(String tweetId : candidateTweetIds){
             //System.out.println(tweetId);
             try {
                 //System.out.println(temp.keySet());
-                System.out.println("remaining queries: " + calls);
+                //System.out.println("remaining queries: " + calls);
                 if(calls <= 0){
                     System.out.println("Retweeers out of calls");
+                    return;
                 }
-                List<String> retweets = getRetweeters(tweetId, calls);
-                System.out.println(retweets.size());
+                List<String> retweets = getRetweeters(tweetId);
                 if(retweets != null && retweets.size() > 0){
                     String retweetFile = (candidate.name+"Retweets.txt").replace(" ", "");
                     writeRetweetersToFile(retweets, retweetFile, tweetId);
                     markTweetAsProcessed(tweetId);
-                    //System.out.println(remaining);
                 } else {
-                    System.out.println("Removing duplicates");
+                    //System.out.println("Removing duplicates");
                     try {
                         removeDuplicates(filename);
                     } catch (IOException ex) {
                         System.out.println("Duplicate removal failed. " + ex.getMessage());
                     }
-                    return;
                 }
             } catch (TwitterException ex) {
                 System.out.println(ex);
@@ -142,8 +142,8 @@ public class RetweetersOfCandidate {
      * @param calls number of API calls left
      * @return List of users that retweeted the given tweet.
      */
-    public List<String> getRetweeters(String tweetId, int calls){
-        System.out.println("Getting retweeters of " + tweetId);
+    public List<String> getRetweeters(String tweetId){
+        //System.out.println("Getting retweeters of " + tweetId);
         List<String> retweeters = new ArrayList<>();
         IDs currentIDs;
         try {
@@ -151,6 +151,7 @@ public class RetweetersOfCandidate {
                 calls-=1;
                 currentIDs = twitter.getRetweeterIds(Long.parseLong(tweetId), -1);
                 long[] longIDs = currentIDs.getIDs();
+                //System.out.println("Got " + longIDs.length + " retweeters");
                 for(int i=0; i<longIDs.length; i++){
                     retweeters.add(""+longIDs[i]);
                 }
@@ -158,6 +159,7 @@ public class RetweetersOfCandidate {
                     calls -= 1;
                     currentIDs = twitter.getRetweeterIds(Long.parseLong(tweetId), currentIDs.getNextCursor());
                     longIDs = currentIDs.getIDs();
+                    //System.out.println("Adding " + longIDs.length + " retweeters");
                     for(int i=0; i<longIDs.length; i++){
                         retweeters.add(""+longIDs[i]);
                     }
@@ -220,7 +222,7 @@ public class RetweetersOfCandidate {
     }
     
     public void removeDuplicates(String filename) throws FileNotFoundException, IOException{
-        System.out.println("Die duplicate retweeters");
+        //System.out.println("Die duplicate retweeters");
         File f1 = new File(filename);
         FileReader fr = new FileReader(f1);
         BufferedReader br = new BufferedReader(fr);

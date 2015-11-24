@@ -13,14 +13,19 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import twitter4j.MediaEntity;
 import twitter4j.Query;
 import twitter4j.QueryResult;
 import twitter4j.Status;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
+import twitter4j.URLEntity;
 
 /**
  *
@@ -29,6 +34,7 @@ import twitter4j.TwitterException;
 public class TweetsAboutCandidates {
     Candidate candidate;
     private final Twitter twitter;
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     
     public TweetsAboutCandidates(Candidate candidate, Twitter twitter){
         this.candidate = candidate;
@@ -41,12 +47,14 @@ public class TweetsAboutCandidates {
             query += alias + " OR ";
         }
         query = query.substring(0,query.length() - 3);
+
         while(true){
             if(calls > 0){
-                System.out.println("Searching before maxId " + maxId);
+                //System.out.println("Searching before maxId " + maxId);
                 List<Status> tweets = search(query, maxId);
-                maxId = tweets.get(tweets.size()-1).getId();
-                writeTweetsToFile(tweets, FileName);   
+                //System.out.println(tweets.size());
+                maxId = tweets.get(tweets.size()-1).getId();   
+                writeTweetsToFile(tweets, FileName); 
                 calls-=1;
             } else {
                 System.out.println("TweetsAboutCandidates ran out of calls");
@@ -62,11 +70,30 @@ public class TweetsAboutCandidates {
         }
     }
     
+    public String getRandomDate(String after){
+        long beginTime = dateFormat.parse(after, new ParsePosition(0)).getTime();
+        long endTime = System.currentTimeMillis();
+        long diff = endTime - beginTime + 1;
+        long randomTime = beginTime + (long) (Math.random() * diff);
+        Date randomDate;
+       
+        randomDate = new Date(randomTime);
+        
+        return dateFormat.format(randomDate);
+    }
+    
+    /**
+     * Searches for tweets using the given query string.
+     * @param str the query to use
+     * @return List of the tweet statuses that match the query.
+     */
     public List<Status> search(String str, long maxId){
         List<Status> tweets = null;
         try {
             Query query = new Query(str);
             query.setCount(100);
+            //English only.
+            query.setLang("en");
             QueryResult result;
             query.setMaxId(maxId);
             result = twitter.search(query);
@@ -84,16 +111,48 @@ public class TweetsAboutCandidates {
      * @return true unless something bad happens
      */
     public boolean writeTweetsToFile(List<Status> tweets, String filename){
-        System.out.println("Writing " + tweets.size() + " tweets");
+        //System.out.println("Writing " + tweets.size() + " tweets");
         boolean success = true;
         try {
             FileWriter addTweets = new FileWriter(new File(filename), true);
             if(tweets!= null && tweets.size()>0){
                 for(Status tweet : tweets){
-                    String encodedText = Base64.encode(tweet.getText().getBytes("UTF-8"));     
-                    addTweets.write(encodedText + "," + tweet.getUser().getId() +
+                    String tweetText;
+                    if(tweet.getRetweetedStatus()!=null){
+                        tweetText = "RT " + tweet.getRetweetedStatus().getText();
+                        //System.out.println("retweeted" + tweetText);
+                    } else {
+                        tweetText = tweet.getText();
+                    }
+                    String urlText = "";
+                    if(tweet.getURLEntities().length > 0){
+                        for(URLEntity url:tweet.getURLEntities()){
+                            if(url.getExpandedURL() != null){
+                                urlText += url.getExpandedURL() + " ";
+                                //System.out.println("Expanded URL " + url.getExpandedURL());
+                            } else {
+                                urlText += url.getURL() + " ";
+                                //System.out.println("URL " + url.getURL());    
+                            }
+                        }
+                    }
+                    if(tweet.getMediaEntities().length > 0){
+                        for(MediaEntity media:tweet.getMediaEntities()){
+                            if(media.getExpandedURL() != null){
+                                urlText += media.getExpandedURL() + " ";
+                                //System.out.println("Expanded URL " + media.getExpandedURL());
+                            } else {
+                                urlText += media.getMediaURL() + " ";
+                                //System.out.println("URL " + media.getMediaURL());    
+                            }
+                        }
+                    }
+                    String encodedText = tweet.getText().replaceAll("\"", "\"\"");
+                    String writeMe = "\"" + encodedText + "\"," + tweet.getUser().getId() +
                             "," + tweet.getId() + ","+ candidate.name + 
-                            "," + tweet.getCreatedAt() + "\n");
+                            "," + tweet.getCreatedAt() + "," + urlText + "\n";
+                    //System.out.println(writeMe);
+                    addTweets.write(writeMe);
                 }
             }
             addTweets.close();
@@ -105,7 +164,7 @@ public class TweetsAboutCandidates {
     }
     
     public void removeDuplicates(String filename) throws FileNotFoundException, IOException{
-        System.out.println("Die duplicates");
+        //System.out.println("Die duplicates");
         File f1 = new File(filename);
         FileReader fr = new FileReader(f1);
         BufferedReader br = new BufferedReader(fr);
