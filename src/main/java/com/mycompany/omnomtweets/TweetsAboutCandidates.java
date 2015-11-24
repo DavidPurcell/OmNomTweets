@@ -5,7 +5,6 @@
  */
 package com.mycompany.omnomtweets;
 
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
